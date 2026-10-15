@@ -17,5 +17,12 @@
 
     <!-- keep these 2 values in dp to avoid scaling -->
     <dimen name="dialpad_text_size">28dp</dimen>
-    <dimen name="dialpad_letters_text_size">12dp</dimen>
+
+    <dimen name="cf_contact_row_min_height">72dp</dimen>
+    <dimen name="cf_contact_avatar_size">48dp</dimen>
+    <dimen name="cf_dialpad_number_text_size">32sp</dimen>
+    <dimen name="cf_dialpad_letters_text_size">12sp</dimen>
+    <dimen name="cf_touch_target_size">48dp</dimen>
+    <dimen name="cf_shape_medium_radius">12dp</dimen>
+    <dimen name="cf_shape_large_radius">16dp</dimen>
 </resources>

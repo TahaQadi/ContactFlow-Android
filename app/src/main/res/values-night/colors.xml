@@ -1,6 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="color_missed_call">@color/md_red_400</color>
+    <color name="cf_primary">#B6C8FF</color>
+    <color name="cf_on_primary">#1A326F</color>
+    <color name="cf_primary_container">#354B82</color>
+    <color name="cf_on_primary_container">#E0E7FF</color>
+    <color name="cf_secondary">#7BD9CE</color>
+    <color name="cf_on_secondary">#003B36</color>
+    <color name="cf_background">#11131A</color>
+    <color name="cf_surface">#191C24</color>
+    <color name="cf_surface_container">#222630</color>
+    <color name="cf_on_surface">#E4E6EF</color>
+    <color name="cf_on_surface_variant">#BDC2D0</color>
+    <color name="cf_outline">#8991A3</color>
+    <color name="cf_error">#FFB4AB</color>
+    <color name="cf_on_error">#690005</color>
+    <color name="cf_call_action">#62D6A3</color>
+    <color name="cf_on_call_action">#003A28</color>
+    <color name="cf_primary_bar">#354B82</color>
+    <color name="cf_on_primary_bar">#E0E7FF</color>
+
+    <!-- A dark bar fill keeps legacy Views toolbars readable in night mode. -->
+    <color name="color_primary">@color/cf_primary_bar</color>
+    <color name="color_primary_dark">#1A326F</color>
+
+    <color name="color_missed_call">@color/cf_error</color>
     <color name="color_outgoing_call">@color/md_green_300</color>
     <color name="color_incoming_call">@color/md_blue_300</color>
 </resources>

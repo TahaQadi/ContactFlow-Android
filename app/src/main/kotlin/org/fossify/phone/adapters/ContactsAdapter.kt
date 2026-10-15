@@ -1,6 +1,7 @@
 package org.fossify.phone.adapters
 
 import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.ShortcutInfo
 import android.graphics.drawable.Icon
@@ -32,9 +33,13 @@ import org.fossify.phone.activities.SimpleActivity
 import org.fossify.phone.extensions.areMultipleSIMsAvailable
 import org.fossify.phone.extensions.callContactWithSim
 import org.fossify.phone.extensions.config
+import org.fossify.phone.extensions.startCallWithConfirmationCheck
 import org.fossify.phone.extensions.startContactDetailsIntent
+import org.fossify.phone.helpers.ContactQuickAction
+import org.fossify.phone.helpers.contactQuickActions
 import org.fossify.phone.interfaces.RefreshItemsListener
 import java.util.Collections
+import kotlin.math.abs
 
 class ContactsAdapter(
     activity: SimpleActivity,
@@ -311,6 +316,34 @@ class ContactsAdapter(
         return getSelectedItems().firstOrNull()?.getPrimaryNumber()
     }
 
+    private fun showQuickActions(contact: Contact) {
+        val messageNumber = contact.phoneNumbers.firstOrNull { it.isPrimary }?.normalizedNumber
+            ?: contact.phoneNumbers.firstOrNull()?.normalizedNumber
+        val actions = contactQuickActions(
+            hasPhoneNumber = contact.phoneNumbers.isNotEmpty(),
+            hasMessageNumber = !messageNumber.isNullOrBlank()
+        ).map { action ->
+            when (action) {
+                ContactQuickAction.CALL -> R.string.call to {
+                    (activity as SimpleActivity).startCallWithConfirmationCheck(contact)
+                }
+                ContactQuickAction.MESSAGE -> R.string.send_sms to {
+                    activity.launchSendSMSIntent(messageNumber.orEmpty())
+                }
+                ContactQuickAction.DETAILS -> R.string.view_contact_details to {
+                    profileIconClick?.invoke(contact)
+                }
+            }
+        }
+
+        AlertDialog.Builder(activity)
+            .setTitle(contact.getNameToDisplay())
+            .setItems(actions.map { activity.getString(it.first) }.toTypedArray()) { _, index ->
+                actions.getOrNull(index)?.second?.invoke()
+            }
+            .show()
+    }
+
     @SuppressLint("NewApi")
     private fun createShortcut() {
         val contact = contacts.firstOrNull { selectedKeys.contains(it.rawId) } ?: return
@@ -349,16 +382,66 @@ class ContactsAdapter(
     @SuppressLint("ClickableViewAccessibility")
     private fun setupView(binding: ItemViewBinding, contact: Contact, holder: ViewHolder) {
         binding.apply {
-            root.setupViewBackground(activity)
-            itemContactFrame.isSelected = selectedKeys.contains(contact.rawId)
+            root.setBackgroundResource(R.drawable.cf_contact_row_background)
+            val isSelected = selectedKeys.contains(contact.rawId)
+            itemContactFrame.isSelected = isSelected
+            itemContactName.setTextColor(
+                activity.getColor(
+                    if (isSelected) R.color.cf_on_primary_container else R.color.cf_on_surface
+                )
+            )
+            itemContactNumber?.apply {
+                val number = contact.getPrimaryNumber().orEmpty()
+                text = number
+                visibility = if (number.isBlank()) View.GONE else View.VISIBLE
+                setTextColor(
+                    activity.getColor(
+                        if (isSelected) {
+                            R.color.cf_on_primary_container
+                        } else {
+                            R.color.cf_on_surface_variant
+                        }
+                    )
+                )
+            }
 
             itemContactImage.apply {
-                if (profileIconClick != null && viewType != VIEW_TYPE_GRID) {
+                if (profileIconClick != null) {
                     setBackgroundResource(R.drawable.selector_clickable_circle)
+                    isFocusable = true
+                    contentDescription = activity.getString(
+                        R.string.quick_actions_for_contact,
+                        contact.getNameToDisplay()
+                    )
 
+                    var touchDownX = 0f
+                    var touchDownY = 0f
+                    val swipeThreshold = ViewConfiguration.get(activity).scaledTouchSlop * 2
+                    setOnTouchListener { _, event ->
+                        when (event.action) {
+                            MotionEvent.ACTION_DOWN -> {
+                                touchDownX = event.x
+                                touchDownY = event.y
+                                false
+                            }
+
+                            MotionEvent.ACTION_UP -> {
+                                val horizontalSwipe = abs(event.x - touchDownX) > swipeThreshold &&
+                                    abs(event.x - touchDownX) > abs(event.y - touchDownY)
+                                if (horizontalSwipe && !actModeCallback.isSelectable) {
+                                    showQuickActions(contact)
+                                    true
+                                } else {
+                                    false
+                                }
+                            }
+
+                            else -> false
+                        }
+                    }
                     setOnClickListener {
                         if (!actModeCallback.isSelectable) {
-                            profileIconClick.invoke(contact)
+                            showQuickActions(contact)
                         } else {
                             holder.viewClicked(contact)
                         }
@@ -367,6 +450,10 @@ class ContactsAdapter(
                         holder.viewLongClicked()
                         true
                     }
+                } else {
+                    setOnTouchListener(null)
+                    setOnClickListener(null)
+                    setOnLongClickListener(null)
                 }
             }
 
@@ -421,6 +508,12 @@ class ContactsAdapter(
 
             if (!activity.isDestroyed) {
                 SimpleContactsHelper(root.context).loadContactImage(contact.photoUri, itemContactImage, contact.getNameToDisplay())
+                if (profileIconClick != null) {
+                    itemContactImage.contentDescription = activity.getString(
+                        R.string.quick_actions_for_contact,
+                        contact.getNameToDisplay()
+                    )
+                }
             }
         }
     }
@@ -506,6 +599,7 @@ class ContactsAdapter(
 
     private interface ItemViewBinding : ViewBinding {
         val itemContactName: TextView
+        val itemContactNumber: TextView?
         val itemContactImage: ImageView
         val itemContactFrame: ConstraintLayout
         val dragHandleIcon: ImageView
@@ -513,6 +607,7 @@ class ContactsAdapter(
 
     private class ItemContactGridBindingAdapter(val binding: ItemContactWithoutNumberGridBinding) : ItemViewBinding {
         override val itemContactName = binding.itemContactName
+        override val itemContactNumber: TextView? = null
         override val itemContactImage = binding.itemContactImage
         override val itemContactFrame = binding.itemContactFrame
         override val dragHandleIcon = binding.dragHandleIcon
@@ -522,6 +617,7 @@ class ContactsAdapter(
 
     private class ItemContactBindingAdapter(val binding: ItemContactWithoutNumberBinding) : ItemViewBinding {
         override val itemContactName = binding.itemContactName
+        override val itemContactNumber = binding.root.findViewById<TextView>(R.id.item_contact_number)
         override val itemContactImage = binding.itemContactImage
         override val itemContactFrame = binding.itemContactFrame
         override val dragHandleIcon = binding.dragHandleIcon

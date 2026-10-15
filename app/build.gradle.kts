@@ -1,18 +1,10 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-import org.jetbrains.kotlin.konan.properties.Properties
-import java.io.FileInputStream
 
 plugins {
     alias(libs.plugins.android)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.detekt)
-}
-
-val keystorePropertiesFile: File = rootProject.file("keystore.properties")
-val keystoreProperties = Properties()
-if (keystorePropertiesFile.exists()) {
-    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 fun hasSigningVars(): Boolean {
@@ -39,18 +31,17 @@ android {
     }
 
     signingConfigs {
-        if (keystorePropertiesFile.exists()) {
-            register("release") {
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-            }
-        } else if (hasSigningVars()) {
+        if (hasSigningVars()) {
             register("release") {
                 keyAlias = providers.environmentVariable("SIGNING_KEY_ALIAS").get()
                 keyPassword = providers.environmentVariable("SIGNING_KEY_PASSWORD").get()
-                storeFile = file(providers.environmentVariable("SIGNING_STORE_FILE").get())
+                val configuredStoreFile =
+                    file(providers.environmentVariable("SIGNING_STORE_FILE").get()).canonicalFile
+                val repositoryRoot = rootProject.projectDir.canonicalFile.toPath()
+                require(!configuredStoreFile.toPath().startsWith(repositoryRoot)) {
+                    "The release keystore must be stored outside the repository."
+                }
+                storeFile = configuredStoreFile
                 storePassword = providers.environmentVariable("SIGNING_STORE_PASSWORD").get()
             }
         } else {
@@ -74,7 +65,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            if (keystorePropertiesFile.exists() || hasSigningVars()) {
+            if (hasSigningVars()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }
@@ -144,5 +135,6 @@ dependencies {
     implementation(libs.eventbus)
     implementation(libs.libphonenumber)
     implementation(libs.geocoder)
+    testImplementation(libs.junit)
     detektPlugins(libs.compose.detekt)
 }

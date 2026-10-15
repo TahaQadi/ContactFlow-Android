@@ -6,7 +6,8 @@
 .DS_Store
 /build
 /captures
-keystore.jks
+*.jks
+*.keystore
 keystore.properties
 fastlane/fastlane.json
 fastlane/report.xml

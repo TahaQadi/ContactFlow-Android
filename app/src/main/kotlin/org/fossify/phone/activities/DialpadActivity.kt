@@ -14,7 +14,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
-import androidx.core.content.res.ResourcesCompat
 import androidx.core.net.toUri
 import androidx.core.view.isVisible
 import androidx.lifecycle.lifecycleScope
@@ -38,7 +37,6 @@ import org.fossify.commons.extensions.value
 import org.fossify.commons.extensions.viewBinding
 import org.fossify.commons.helpers.ContactsHelper
 import org.fossify.commons.helpers.KeypadHelper
-import org.fossify.commons.helpers.LOWER_ALPHA_INT
 import org.fossify.commons.helpers.MyContactsContentProvider
 import org.fossify.commons.helpers.NavigationIcon
 import org.fossify.commons.helpers.REQUEST_CODE_SET_DEFAULT_DIALER
@@ -136,9 +134,7 @@ class DialpadActivity : SimpleActivity() {
                 dialpadAsteriskHolder,
                 dialpadHashtagHolder
             ).forEach {
-                it.background =
-                    ResourcesCompat.getDrawable(resources, R.drawable.pill_background, theme)
-                it.background?.alpha = LOWER_ALPHA_INT
+                it.setBackgroundResource(R.drawable.cf_dialpad_key_background)
             }
         }
 
@@ -204,13 +200,15 @@ class DialpadActivity : SimpleActivity() {
         }
 
         val properPrimaryColor = getProperPrimaryColor()
+        val callActionColor = getColor(R.color.cf_call_action)
+        val onCallActionColor = getColor(R.color.cf_on_call_action)
         binding.apply {
             val callIcon = resources.getColoredDrawableWithColor(
                 drawableId = R.drawable.ic_phone_vector,
-                color = properPrimaryColor.getContrastColor()
+                color = onCallActionColor
             )
             dialpadCallButton.setImageDrawable(callIcon)
-            dialpadCallButton.background.applyColorFilter(properPrimaryColor)
+            dialpadCallButton.background.applyColorFilter(callActionColor)
 
             letterFastscroller.textColor = getProperTextColor().getColorStateList()
             letterFastscroller.pressedTextColor = properPrimaryColor
@@ -223,8 +221,45 @@ class DialpadActivity : SimpleActivity() {
     override fun onResume() {
         super.onResume()
         updateTextColors(binding.dialpadHolder)
+        applyContactFlowDialpadColors()
         binding.dialpadClearChar.applyColorFilter(getProperTextColor())
         setupTopAppBar(binding.dialpadAppbar, NavigationIcon.Arrow)
+    }
+
+    private fun applyContactFlowDialpadColors() {
+        val numberColor = getColor(R.color.cf_on_surface)
+        val letterColor = getColor(R.color.cf_on_surface_variant)
+        binding.dialpadInput.setTextColor(numberColor)
+
+        binding.dialpadWrapper.apply {
+            listOf(
+                dialpad1,
+                dialpad2,
+                dialpad3,
+                dialpad4,
+                dialpad5,
+                dialpad6,
+                dialpad7,
+                dialpad8,
+                dialpad9,
+                dialpad0,
+                dialpadPlusAlt,
+                dialpadAsterisk,
+                dialpadHashtag
+            ).forEach { it.setTextColor(numberColor) }
+
+            listOf(
+                dialpad2Letters,
+                dialpad3Letters,
+                dialpad4Letters,
+                dialpad5Letters,
+                dialpad6Letters,
+                dialpad7Letters,
+                dialpad8Letters,
+                dialpad9Letters,
+                dialpadPlusLetters
+            ).forEach { it.setTextColor(letterColor) }
+        }
     }
 
     private fun setupOptionsMenu() {
